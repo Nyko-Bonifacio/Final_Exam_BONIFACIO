@@ -1,0 +1,76 @@
+---
+- name: Setup Enterprise Service, Monitoring, and MOTD
+  hosts: all
+  become: yes
+
+  vars:
+    username: "BONIFACIO"             # Your username
+    enterprise_service: "nginx" # Enterprise service
+    monitoring_tool: "node_exporter"
+    monitoring_port: 9100
+
+  tasks:
+
+    # Install Enterprise Service (Nginx)
+    - name: Install Nginx on Debian
+      apt:
+        name: "{{ enterprise_service }}"
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Nginx on CentOS
+      yum:
+        name: "{{ enterprise_service }}"
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure Nginx is running
+      service:
+        name: "{{ enterprise_service }}"
+        state: started
+        enabled: yes
+
+    # Install Monitoring Tool (Node Exporter)
+    - name: Download Node Exporter
+      get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+
+    - name: Extract Node Exporter
+      unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /usr/local/bin/
+        remote_src: yes
+        extra_opts: [--strip-components=1]
+
+    - name: Create Node Exporter systemd service
+      copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          After=network.target
+
+          [Service]
+          User=root
+          ExecStart=/usr/local/bin/node_exporter
+
+          [Install]
+          WantedBy=default.target
+
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: Enable and start Node Exporter
+      systemd:
+        name: node_exporter
+        state: started
+        enabled: yes
+
+    # Update MOTD
+    - name: Update MOTD
+      copy:
+        dest: /etc/motd
+        content: "Ansible Managed by {{ username }}"
