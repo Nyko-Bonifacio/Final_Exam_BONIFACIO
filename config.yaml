@@ -4,14 +4,31 @@
   become: yes
 
   vars:
-    username: "BONIFACIO"             # Your username
-    enterprise_service: "nginx" # Enterprise service
+    username: "BONIFACIO"
+    enterprise_service: "nginx"
     monitoring_tool: "node_exporter"
-    monitoring_port: 9100
 
   tasks:
+    # FIX: STOP APACHE/HTTPD FIRST (IGNORE IF NOT FOUND)
 
-    # Install Enterprise Service (Nginx)
+    - name: Stop Apache2 on Debian if running
+      service:
+        name: apache2
+        state: stopped
+      when: ansible_os_family == "Debian"
+      ignore_errors: yes
+      failed_when: false
+
+    - name: Stop httpd on CentOS if running
+      service:
+        name: httpd
+        state: stopped
+      when: ansible_os_family == "RedHat"
+      ignore_errors: yes
+      failed_when: false
+
+    # INSTALL NGINX (ENTERPRISE SERVICE)
+
     - name: Install Nginx on Debian
       apt:
         name: "{{ enterprise_service }}"
@@ -31,7 +48,8 @@
         state: started
         enabled: yes
 
-    # Install Monitoring Tool (Node Exporter)
+    # INSTALL NODE EXPORTER
+
     - name: Download Node Exporter
       get_url:
         url: "https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz"
@@ -42,7 +60,7 @@
         src: /tmp/node_exporter.tar.gz
         dest: /usr/local/bin/
         remote_src: yes
-        extra_opts: [--strip-components=1]
+        extra_opts: [ "--strip-components=1" ]
 
     - name: Create Node Exporter systemd service
       copy:
@@ -57,7 +75,7 @@
           ExecStart=/usr/local/bin/node_exporter
 
           [Install]
-          WantedBy=default.target
+          WantedBy=multi-user.target
 
     - name: Reload systemd
       systemd:
@@ -69,7 +87,8 @@
         state: started
         enabled: yes
 
-    # Update MOTD
+    # UPDATE MOTD
+
     - name: Update MOTD
       copy:
         dest: /etc/motd

@@ -1,0 +1,31 @@
+---
+- name: Verify Installation of Services and MOTD
+  hosts: all
+  become: yes
+
+  tasks:
+    # VERIFY NGINX
+    - name: Show Nginx version
+      shell: nginx -v 2>&1
+      register: nginx_version
+      ignore_errors: yes
+
+    - debug:
+        var: nginx_version.stdout
+
+    # VERIFY NODE EXPORTER
+    - name: Show Node Exporter version
+      shell: node_exporter --version 2>&1 | head -n 1
+      register: ne_version
+      ignore_errors: yes
+
+    - debug:
+        var: ne_version.stdout
+
+    # VERIFY MOTD
+    - name: Show MOTD content
+      shell: cat /etc/motd
+      register: motd_output
+
+    - debug:
+        var: motd_output.stdout

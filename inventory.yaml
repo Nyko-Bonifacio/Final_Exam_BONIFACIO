@@ -1,0 +1,7 @@
+[local]
+localhost ansible_connection=local ansible_user=onyk
+
+[webservers]
+192.168.56.111 ansible_user=onyk
+192.168.56.113 ansible_user=onyk
+
